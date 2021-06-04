@@ -2,13 +2,16 @@
 
 namespace Drupal\search_api_glossary\Plugin\facets\processor;
 
+use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
 use Drupal\facets\FacetInterface;
 use Drupal\facets\Processor\BuildProcessorInterface;
 use Drupal\facets\Processor\ProcessorPluginBase;
 use Drupal\facets\Result\Result;
 use Drupal\Core\Url;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\ParameterBag;
 use Symfony\Component\HttpFoundation\Request;
+use Drupal\Core\Pager\PagerParametersInterface;
 
 /**
  * Provides a processor to show All items in Glossary AZ.
@@ -22,7 +25,39 @@ use Symfony\Component\HttpFoundation\Request;
  *   }
  * )
  */
-class GlossaryAZAllItemsProcessor extends ProcessorPluginBase implements BuildProcessorInterface {
+class GlossaryAZAllItemsProcessor extends ProcessorPluginBase implements BuildProcessorInterface, ContainerFactoryPluginInterface {
+
+  /**
+   * The pager parameters.
+   *
+   * @var \Drupal\Core\Pager\PagerParametersInterface
+   */
+  protected $pagerParams;
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
+    $instance = new static(
+      $configuration,
+      $plugin_id,
+      $plugin_definition
+    );
+    return $instance->setPagerParams($container->get('pager.parameters'));
+  }
+
+  /**
+   * Sets pager parameters service.
+   *
+   * @param \Drupal\Core\Pager\PagerParametersInterface $pager_params
+   *
+   * @return $this
+   *   Current object.
+   */
+  public function setPagerParams(PagerParametersInterface $pager_params) {
+    $this->pagerParams = $pager_params;
+    return $this;
+  }
 
   /**
    * {@inheritdoc}
@@ -46,7 +81,7 @@ class GlossaryAZAllItemsProcessor extends ProcessorPluginBase implements BuildPr
     $url = Url::createFromRequest($path);
 
     // First get the current list of get parameters without pager.
-    $get_params = new ParameterBag(pager_get_query_parameters());
+    $get_params = new ParameterBag($this->pagerParams->getQueryParameters());
 
     // See UrlProcessorPluginBase::__construct.
     $facet_source_config = $facet->getFacetSourceConfig();
